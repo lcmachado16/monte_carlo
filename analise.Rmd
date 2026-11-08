@@ -1,0 +1,120 @@
+---
+title: "Análise Monte Carlo"
+author: "Seu Nome"
+output: html_document
+---
+
+# Configuração Inicial
+
+Diferente de um script comum, no R Markdown nós colocamos o código dentro destas caixas chamadas "chunks". Você pode rodar este bloco clicando no botão de 'Play' (Run) que aparece no canto superior direito desta caixa no VS Code.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+
+# 
+dados <- read.csv("dados/output_resultados.csv")
+
+dados$N <- as.factor(dados$N)
+dados$Threads <- as.factor(dados$Threads)
+
+plot
+```
+
+
+### Informações sobre os dados
+
+Quero saber quais colunas tem e quais são os tipos de dados de cada coluna. Para isso, podemos usar a função `summary()`.
+
+```{r }
+names(dados)
+```
+
+> names(dados)
+[1] "Repeticao"      "Threads"        "N"              "M"             
+[5] "Pi_Estimado"    "Erro_Abs"       "Erro_Rel_Perc"  "Tempo_Execucao"
+
+
+```{r}
+
+# Erro relativo em %
+ggplot(dados, aes(x = N, y = Erro_Rel_Perc, color = Threads)) +
+  geom_line() + geom_point() +
+  scale_y_log10() +
+  labs(y = "Erro relativo (%)", x = "N") +
+  theme_minimal()
+library(ggplot2)
+library(dplyr)
+
+```
+
+
+
+#### Decaimento do Erro Absoluto em função de N
+``` {r}
+ggplot(dados, aes(x = as.factor(N), y = Erro_Abs)) +
+  geom_jitter(width = 0.15, alpha = 0.5, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
+  stat_summary(fun = mean, geom = "line", aes(group = 1),
+               color = "darkblue", linewidth = 1) +
+  labs(title = "Decaimento do Erro Absoluto em função de N",
+       x = "Número de Pontos Simulados (N)",
+       y = "Erro Absoluto") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+
+#### Decaimento do Erro Relativo em função de N
+``` {r}
+ggplot(dados, aes(x = as.factor(N), y = Erro_Rel_Perc)) +
+  geom_jitter(width = 0.15, alpha = 0.5, color = "steelblue") +
+  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
+  stat_summary(fun = mean, geom = "line", aes(group = 1),
+               color = "darkblue", linewidth = 1) +
+  labs(title = "Decaimento do Erro Relativo em função de N",
+       x = "Número de Pontos Simulados (N)",
+       y = "Erro Relativo (%)") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+#### Descobrir quantos valores de N foram testados
+```{r}
+length(unique(dados$N))
+#| foram 4
+```
+
+hmm... foram talvez seja interessante analisar o tempo de execução em função de N e do número de threads. 
+
+```{r}
+
+
+
+# Pré-agrega: média do tempo por (N, Threads)
+tempo_medio <- dados %>%
+  group_by(N, Threads) %>%
+  summarise(Tempo_Medio = mean(Tempo_Execucao), .groups = "drop")
+
+ggplot(tempo_medio, aes(x = N, y = Tempo_Medio, color = factor(Threads))) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  theme(plot.title = element_text(face = "bold"))
+
+```
+
+
+```{r}
+# Tempo de execução em função de N e do número de threads
+ggplot(dados, aes(x = N, y = Tempo_Execucao, color = Threads)) +
+  geom_jitter(width = 0.15, alpha = 0.5) +
+  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
+  stat_summary(fun = mean, geom = "line", aes(group = Threads),
+               color = "darkblue", linewidth = 1) +
+  labs(title = "Tempo de Execução em função de N e do número de threads",
+       x = "Número de Pontos Simulados (N)",
+       y = "Tempo de Execução (s)") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold"))
+```
+

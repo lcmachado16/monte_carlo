@@ -1,0 +1,71 @@
+# ============================================================
+# Emacs / Org-mode — arquivos auxiliares
+# ============================================================
+
+# Lock files (quando um buffer aberto está sendo editado)
+.#*
+\#*\#
+
+# Autosave (recuperação após crash do Emacs)
+*~
+\#*#
+*.orig
+
+# Backup automático (gerado por backup-buffer)
+*.~*~
+*~
+
+# Sessões persistentes do Org-babel / ESS / R
+*_region.R
+*.Rhistory
+.RData
+.Rproj.user/
+
+# Diretórios de cache do Org
+.dir-locals-2.el
+.dir-locals.el
+org-timestamps/
+.emacs.d/
+.elpa/
+elpa/
+straight/
+
+# ============================================================
+# Artefatos gerados pela pipeline
+# ============================================================
+
+# Binários compilados
+bin/
+*.o
+*.obj
+*.exe
+
+# Saídas de dados (regeneradas por `make input` e `make run`)
+dados/
+
+# Figuras geradas pelo analise.org
+figuras/
+*.png
+*.pdf
+
+# Arquivos intermediários do Org / LaTeX / HTML
+analise.tex
+analise.html
+analise.pdf
+*.aux
+*.toc
+*.out
+*.log
+auto/
+
+# ============================================================
+# Sistema / editor
+# ============================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+.idea/

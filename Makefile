@@ -8,9 +8,9 @@ SCRIPT_SHELL = scripts/executor.sh
 INPUT_CSV = dados/input_experimentos.csv
 OUTPUT_CSV = dados/output_resultados.csv
 
-all: analyze
+all: run
 
-# Cria os diretórios necessários caso não existam
+
 dirs:
 	mkdir -p bin dados
 
@@ -19,14 +19,10 @@ compile: dirs $(SRC)
 
 input: dirs
 	Rscript $(SCRIPT_R_INPUT)
-	mv input_experimentos.csv $(INPUT_CSV)
 
 run: compile input
 	chmod +x $(SCRIPT_SHELL)
 	./$(SCRIPT_SHELL)
-
-analyze: run
-	emacs --batch -l ~/.emacs analise.org -f org-babel-execute-buffer
 
 
 clean:

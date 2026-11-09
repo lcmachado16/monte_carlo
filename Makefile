@@ -1,29 +1,58 @@
-CXX = g++
+CXX      = g++
+# UTF-8 garante acentos/π nos graficos independentemente do locale da maquina
+RSCRIPT  = LC_ALL=C.UTF-8 Rscript
 CXXFLAGS = -fopenmp -O3
-TARGET = bin/monte_carlo
-SRC = src/monte_carlo.cpp
+TARGET   = bin/monte_carlo
+SRC      = src/monte_carlo.cpp
 
 SCRIPT_R_INPUT = scripts/gera_layout.R
-SCRIPT_SHELL = scripts/executor.sh
-INPUT_CSV = dados/input_experimentos.csv
-OUTPUT_CSV = dados/output_resultados.csv
+SCRIPT_SHELL   = scripts/executor.sh
+INPUT_CSV      = dados/input_experimentos.csv
+OUTPUT_CSV     = dados/output_resultados.csv
 
-all: run
+RMD_FILE    = analise.Rmd
+REPORT_DIR  = relatorio
+REPORT_HTML = $(REPORT_DIR)/analise.html
 
+.PHONY: all compile input run rerun relatorio test clean distclean tgz
+
+all: relatorio
 
 dirs:
-	mkdir -p bin dados
+	mkdir -p bin dados figuras
 
-compile: dirs $(SRC)
+$(TARGET): $(SRC) | dirs
 	$(CXX) $(SRC) -o $(TARGET) $(CXXFLAGS)
+compile: $(TARGET)
 
-input: dirs
-	Rscript $(SCRIPT_R_INPUT)
+$(INPUT_CSV): $(SCRIPT_R_INPUT) | dirs
+	$(RSCRIPT) $(SCRIPT_R_INPUT)
+input: $(INPUT_CSV)
 
-run: compile input
-	chmod +x $(SCRIPT_SHELL)
-	./$(SCRIPT_SHELL)
+# Resultados so sao gerados se NAO existirem (prerequisitos order-only):
+# mexer em timestamps (git checkout, tar) nunca dispara re-medicao.
+$(OUTPUT_CSV): | $(TARGET) $(INPUT_CSV)
+	bash $(SCRIPT_SHELL)
+run: $(OUTPUT_CSV)
 
+# Refazer as medicoes de proposito (guarda a copia anterior).
+rerun:
+	@if [ -f $(OUTPUT_CSV) ]; then mv $(OUTPUT_CSV) $(OUTPUT_CSV).anterior; echo "Anterior salvo em $(OUTPUT_CSV).anterior"; fi
+	$(MAKE) $(OUTPUT_CSV)
 
+test: $(TARGET)
+	bash scripts/teste_rapido.sh
+
+relatorio: $(REPORT_HTML)
+$(REPORT_HTML): $(RMD_FILE) $(OUTPUT_CSV)
+	mkdir -p $(REPORT_DIR) figuras
+	$(RSCRIPT) -e "rmarkdown::render('$(RMD_FILE)', output_dir = '$(REPORT_DIR)')"
+
+# 'clean' NAO apaga dados/ (medicoes sao insubstituiveis); use distclean.
 clean:
-	rm -rf bin/ dados/ figuras/
+	rm -rf bin/ figuras/ $(REPORT_DIR)/ analise_cache/
+distclean: clean
+	rm -rf dados/
+
+tgz:
+	tar --exclude=bin --exclude=renv/library -czf ../$(notdir $(CURDIR)).tgz -C .. $(notdir $(CURDIR))

@@ -1,64 +1,57 @@
+// Monte Carlo para estimar pi (OpenMP).
+// Uso: ./monte_carlo <N> <Threads> <Repeticao> [Semente=12345]
+// Saida CSV: Repeticao,Threads,N,M,Pi_Estimado,Erro_Abs,Erro_Rel_Perc,Tempo_Execucao,Semente,Threads_Reais
 #include <iostream>
-#include <cstdlib>
-#include <string>   // Faltava para stoll() e stoi()
+#include <iomanip>
+#include <string>
 #include <random>
 #include <cmath>
+#include <cstdint>
 #include <omp.h>
-
 using namespace std;
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
-        cerr << "Uso: ./monte_carlo <N> <Threads> <Repeticao>" << endl;
+    if (argc != 4 && argc != 5) {
+        cerr << "Uso: ./monte_carlo <N> <Threads> <Repeticao> [Semente]" << endl;
         return 1;
     }
-
-  
     long long N = stoll(argv[1]);
     int num_threads = stoi(argv[2]);
     long long repeticao = stoll(argv[3]);
-    
-    long long M = 0;
-    double pi_ref = acos(-1.0);
+    unsigned long long semente = (argc == 5) ? stoull(argv[4]) : 12345ULL;
 
-    // Nro de threads 
+    long long M = 0;
+    int threads_reais = 0;
+    const double pi_ref = acos(-1.0);
     omp_set_num_threads(num_threads);
 
-    double tempo_inicio = omp_get_wtime();
-
+    double t0 = omp_get_wtime();
     #pragma omp parallel reduction(+:M)
     {
-        // Inicializa o gerador de números aleatórios com uma semente diferente para cada thread
-        mt19937 rng(12345 + omp_get_thread_num() + repeticao);
+        #pragma omp single
+        threads_reais = omp_get_num_threads();
+
+        // Fluxo independente por (semente da execucao, thread): seed_seq mistura os
+        // valores, evitando que threads/repeticoes diferentes compartilhem sequencias
+        // (o esquema "12345 + tid + rep" repetia fluxos entre repeticoes).
+        seed_seq ss{(uint32_t)(semente & 0xFFFFFFFFu), (uint32_t)(semente >> 32),
+                    (uint32_t)omp_get_thread_num()};
+        mt19937 rng(ss);
         uniform_real_distribution<double> dist(-1.0, 1.0);
 
-        #pragma omp for
+        #pragma omp for schedule(static)   // explicito: M depende do particionamento
         for (long long i = 0; i < N; ++i) {
-            double x = dist(rng);
-            double y = dist(rng);
-            if (x * x + y * y <= 1.0) {
-                M++;
-            }
+            double x = dist(rng), y = dist(rng);
+            if (x * x + y * y <= 1.0) M++;
         }
     }
+    double tempo = omp_get_wtime() - t0;
 
-    double tempo_fim = omp_get_wtime();
-    double tempo_execucao = tempo_fim - tempo_inicio;
-
-    // Cast explicito p double para evitar warnings de compilacao
-    double pi_estimado = 4.0 * (double)M / (double)N;
-    double erro_abs = abs(pi_estimado - pi_ref);
-    double erro_rel_percentual = (erro_abs / pi_ref) * 100.0;
-
-    // formatted output for CSV
-    cout << repeticao << ","
-         << num_threads << ","
-         << N << ","
-         << M << ","
-         << pi_estimado << ","
-         << erro_abs << ","
-         << erro_rel_percentual << ","
-         << tempo_execucao << endl;
-
+    double pi_est = 4.0 * (double)M / (double)N;
+    double erro_abs = fabs(pi_est - pi_ref);
+    cout << setprecision(10)
+         << repeticao << "," << num_threads << "," << N << "," << M << ","
+         << pi_est << "," << erro_abs << "," << (erro_abs / pi_ref) * 100.0 << ","
+         << tempo << "," << semente << "," << threads_reais << endl;
     return 0;
 }

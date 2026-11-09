@@ -1,59 +1,35 @@
 #!/bin/bash
-
-# Caminhos já definidos na arquitetura do seu Makefile
+set -uo pipefail
 INPUT_CSV="dados/input_experimentos.csv"
 OUTPUT_CSV="dados/output_resultados.csv"
+TMP_CSV="${OUTPUT_CSV}.tmp"
 EXEC="bin/monte_carlo"
+NCOL=11   # Ordem + 10 colunas do C++
 
-# 1. Validações de segurança
-if [ ! -f "$INPUT_CSV" ]; then
-    echo "Erro: Arquivo de entrada $INPUT_CSV não encontrado. Rode 'make input' primeiro."
-    exit 1
-fi
+[ -f "$INPUT_CSV" ] || { echo "Erro: $INPUT_CSV nao encontrado (make input)."; exit 1; }
+[ -x "$EXEC" ]      || { echo "Erro: $EXEC nao encontrado (make compile)."; exit 1; }
 
-if [ ! -x "$EXEC" ]; then
-    echo "Erro: Executável $EXEC não encontrado. Rode 'make compile' primeiro."
-    exit 1
-fi
+bash scripts/registra_ambiente.sh dados/ambiente.txt
+echo "Ordem,Repeticao,Threads,N,M,Pi_Estimado,Erro_Abs,Erro_Rel_Perc,Tempo_Execucao,Semente,Threads_Reais" > "$TMP_CSV"
 
-# 2. Prepara o arquivo de saída
-# Cria o arquivo gravando o cabeçalho exato que o seu script analise.org espera ler.
-echo "Repeticao,Threads,N,M,Pi_Estimado,Erro_Abs,Erro_Rel_Perc,Tempo_Execucao" > "$OUTPUT_CSV"
+echo "Aquecimento (resultado descartado)..."
+"$EXEC" 100000000 1 0 1 > /dev/null || exit 1
 
-echo "==================================================="
-echo "Iniciando bateria de experimentos Monte Carlo..."
-echo "Lendo parâmetros de: $INPUT_CSV"
-echo "==================================================="
-
-# 3. Loop de Execução
-# O comando tail -n +2 pula a primeira linha (cabeçalho) do input gerado pelo R.
-# O loop 'read' quebra cada linha nas variáveis repeticao, threads e n.
-tail -n +2 "$INPUT_CSV" | while IFS=',' read -r repeticao threads n; do
-    
-    # Remove eventuais quebras de linha/CR ocultas caso o CSV venha com formatação de outro SO
-    n=$(echo "$n" | tr -d '\r')
-    repeticao=$(echo "$repeticao" | tr -d '\r')
-    threads=$(echo "$threads" | tr -d '\r')
-
-    # Feedback visual no terminal para acompanhar o progresso
-    echo -n "[Executando] N = $n | Threads = $threads | Repetição = $repeticao ... "
-
-    # 4. Executa o binário C++
-    # O C++ espera estritamente a ordem: ./monte_carlo <N> <Threads> <Repeticao>
-    resultado=$("./$EXEC" "$n" "$threads" "$repeticao")
-    
-    # Verifica se a execução teve sucesso (código de saída 0)
-    if [ $? -eq 0 ]; then
-        # Acrescenta a saída padronizada (que já é uma linha CSV) no arquivo final
-        echo "$resultado" >> "$OUTPUT_CSV"
-        echo "OK"
-    else
-        echo "FALHA NA EXECUÇÃO!"
-        exit 1
+# done < <(...) evita o subshell do pipe: antes, 'exit 1' dentro de 'tail | while'
+# so saia do subshell e o script ainda imprimia "concluidos com sucesso".
+while IFS=',' read -r ordem repeticao threads n semente; do
+    ordem=${ordem%$'\r'}; semente=${semente%$'\r'}
+    echo -n "[$ordem] N=$n Threads=$threads Rep=$repeticao ... "
+    if ! resultado=$("$EXEC" "$n" "$threads" "$repeticao" "$semente"); then
+        echo "FALHA"; rm -f "$TMP_CSV"; exit 1
     fi
-done
+    if [ "$(echo "$resultado" | awk -F, '{print NF}')" -ne $((NCOL-1)) ]; then
+        echo "FALHA (saida inesperada: $resultado)"; rm -f "$TMP_CSV"; exit 1
+    fi
+    echo "$ordem,$resultado" >> "$TMP_CSV"
+    echo OK
+done < <(tail -n +2 "$INPUT_CSV")
 
-echo "==================================================="
-echo "Todos os experimentos foram concluídos com sucesso!"
-echo "Resultados salvos em: $OUTPUT_CSV"
-echo "Pronto para análise."
+echo "LOADAVG_FIM=$(cut -d' ' -f1-3 /proc/loadavg)" >> dados/ambiente.txt
+mv "$TMP_CSV" "$OUTPUT_CSV"   # so existe saida final se tudo deu certo
+echo "Concluido: $OUTPUT_CSV"

@@ -1,120 +1,242 @@
 ---
-title: "Análise Monte Carlo"
-author: "Seu Nome"
-output: html_document
+title: "Estimativa de π por Monte Carlo com OpenMP — Análise parcial (Entrega 2)"
+author: "Lucas Machado"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    self_contained: true
 ---
 
-# Configuração Inicial
-
-Diferente de um script comum, no R Markdown nós colocamos o código dentro destas caixas chamadas "chunks". Você pode rodar este bloco clicando no botão de 'Play' (Run) que aparece no canto superior direito desta caixa no VS Code.
-
-```{r setup, message=FALSE, warning=FALSE}
-library(dplyr)
-library(ggplot2)
-
-# 
-dados <- read.csv("dados/output_resultados.csv")
-
-dados$N <- as.factor(dados$N)
-dados$Threads <- as.factor(dados$Threads)
-
-plot
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 7.5, fig.height = 4.2, dpi = 110)
 ```
 
-
-### Informações sobre os dados
-
-Quero saber quais colunas tem e quais são os tipos de dados de cada coluna. Para isso, podemos usar a função `summary()`.
-
-```{r }
-names(dados)
+```{r pacotes, include=FALSE}
+suppressPackageStartupMessages({library(dplyr); library(tidyr); library(readr)
+                                library(ggplot2); library(scales)})
+dir.create("figuras", showWarnings = FALSE)
+salva <- function(p, nome) ggsave(file.path("figuras", nome), p, width = 7.5, height = 4.2, dpi = 200)
+# Paleta categórica validada (slots 1-4, ordem fixa): ver dataviz/palette.md
+pal <- c("1" = "#2a78d6", "2" = "#eb6834", "4" = "#1baf7a", "8" = "#eda100")
+tema <- theme_minimal(base_size = 11) +
+  theme(panel.grid.minor = element_blank(), legend.position = "top")
+theme_set(tema)
+lab_N <- labeller(N = function(x) paste0("N = ", formatC(as.numeric(x), format = "d", big.mark = ".")))
 ```
 
-> names(dados)
-[1] "Repeticao"      "Threads"        "N"              "M"             
-[5] "Pi_Estimado"    "Erro_Abs"       "Erro_Rel_Perc"  "Tempo_Execucao"
+## 1. Objetivo
 
+Este documento é o caderno de análise (programação literal) da Entrega 2: ele lê os CSVs
+produzidos pelo pipeline (`make run`), valida os dados e analisa (i) a **precisão** de π̂ em
+função de N e (ii) o **desempenho** (tempo, speedup, eficiência) em função de N e do número de
+threads, conforme as métricas definidas na Entrega 1. Tudo que aparece em número no texto é
+calculado a partir dos dados; reexecutar `make relatorio` regenera o documento inteiro.
 
-```{r}
+## 2. Ambiente experimental
 
-# Erro relativo em %
-ggplot(dados, aes(x = N, y = Erro_Rel_Perc, color = Threads)) +
-  geom_line() + geom_point() +
-  scale_y_log10() +
-  labs(y = "Erro relativo (%)", x = "N") +
-  theme_minimal()
-library(ggplot2)
-library(dplyr)
+O ambiente é lido de `dados/ambiente.txt`, registrado **no momento da medição** por
+`scripts/registra_ambiente.sh` (e não no momento em que este relatório é gerado, que pode ser
+em outra máquina).
 
+```{r ambiente}
+amb_linhas <- readLines("dados/ambiente.txt")
+amb <- setNames(sub("^[^=]*=", "", amb_linhas), sub("=.*$", "", amb_linhas))
+knitr::kable(data.frame(Item = names(amb), Valor = unname(amb)))
+nuc <- as.integer(amb[["NUCLEOS_FISICOS"]]); logicas <- as.integer(amb[["CPUS_LOGICAS"]])
 ```
 
+Detalhes de medição: o tempo (`omp_get_wtime`) cobre a região paralela inteira (criação das
+threads, geração dos números e classificação dos pontos). Antes da bateria é feita uma execução
+de aquecimento descartada. **O "tempo sequencial" T(1) usado no speedup é o binário OpenMP com
+1 thread**, não uma versão compilada sem OpenMP (ver Limitações).
 
+## 3. Projeto experimental (DOE)
 
-#### Decaimento do Erro Absoluto em função de N
-``` {r}
-ggplot(dados, aes(x = as.factor(N), y = Erro_Abs)) +
-  geom_jitter(width = 0.15, alpha = 0.5, color = "steelblue") +
-  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
-  stat_summary(fun = mean, geom = "line", aes(group = 1),
-               color = "darkblue", linewidth = 1) +
-  labs(title = "Decaimento do Erro Absoluto em função de N",
-       x = "Número de Pontos Simulados (N)",
-       y = "Erro Absoluto") +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold"))
+```{r doe}
+inp <- read_csv("dados/input_experimentos.csv", show_col_types = FALSE)
+inp %>% count(N, Threads, name = "repeticoes") %>%
+  pivot_wider(names_from = Threads, values_from = repeticoes, names_prefix = "p=") %>%
+  knitr::kable(caption = "Repetições por célula do fatorial N × Threads")
 ```
 
+Fatorial completo com `r n_distinct(inp$N)` valores de N × `r n_distinct(inp$Threads)` valores
+de threads × `r n_distinct(inp$Repeticao)` repetições = **`r nrow(inp)` execuções**, geradas por
+`scripts/gera_layout.R` com semente fixa. A **ordem de execução é aleatória** (coluna `Ordem`),
+de modo que qualquer deriva do sistema (temperatura, processos concorrentes) não se confunda
+com um fator. Cada execução tem uma **semente própria e única** (coluna `Semente`), repassada
+ao C++, que deriva um fluxo independente por thread via `std::seed_seq`.
 
-#### Decaimento do Erro Relativo em função de N
-``` {r}
-ggplot(dados, aes(x = as.factor(N), y = Erro_Rel_Perc)) +
-  geom_jitter(width = 0.15, alpha = 0.5, color = "steelblue") +
-  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
-  stat_summary(fun = mean, geom = "line", aes(group = 1),
-               color = "darkblue", linewidth = 1) +
-  labs(title = "Decaimento do Erro Relativo em função de N",
-       x = "Número de Pontos Simulados (N)",
-       y = "Erro Relativo (%)") +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold"))
+## 4. Dados e validação
+
+```{r dados}
+res <- read_csv("dados/output_resultados.csv", show_col_types = FALSE)
+pi_ref <- pi
+chk <- inp %>% inner_join(res, by = "Ordem", suffix = c("", ".out"))
+checks <- c(
+  "Nº de execuções = plano"            = nrow(res) == nrow(inp),
+  "Sem valores ausentes"               = !anyNA(res),
+  "0 ≤ M ≤ N"                          = all(res$M >= 0 & res$M <= res$N),
+  "π̂ = 4M/N (consistência)"            = all(abs(res$Pi_Estimado - 4 * res$M / res$N) < 1e-8),
+  "Execuções batem com o plano (N, p, rep, semente)" =
+    all(chk$N == chk$N.out & chk$Threads == chk$Threads.out &
+        chk$Repeticao == chk$Repeticao.out & chk$Semente == chk$Semente.out),
+  "Threads reais = threads pedidas"    = all(res$Threads == res$Threads_Reais),
+  "Sementes únicas"                    = !anyDuplicated(res$Semente)
+)
+knitr::kable(data.frame(Verificacao = names(checks), OK = ifelse(checks, "✔", "✘")))
+stopifnot(all(checks))
+res <- res %>% mutate(Threads_f = factor(Threads), sigma = sqrt(pi * (4 - pi) / N),
+                      z = (Pi_Estimado - pi_ref) / sigma)
 ```
 
-#### Descobrir quantos valores de N foram testados
-```{r}
-length(unique(dados$N))
-#| foram 4
+## 5. Precisão de π̂
+
+Como M ~ Binomial(N, π/4), o desvio-padrão teórico de π̂ é σ(N) = √(π(4−π)/N) ≈ 1,64/√N, e o
+erro absoluto médio esperado é σ·√(2/π). Logo, o erro deve cair com **N^−1/2**: cada casa
+decimal a mais custa 100× mais pontos.
+
+```{r precisao}
+teo <- tibble(N = 10^seq(4, 9, length.out = 100)) %>%
+  mutate(esp = sqrt(pi * (4 - pi) / N) * sqrt(2 / pi))
+medio <- res %>% group_by(N) %>% summarise(Erro_Abs = mean(Erro_Abs), .groups = "drop")
+p1 <- ggplot(res, aes(N, Erro_Abs)) +
+  geom_line(data = teo, aes(y = esp, linetype = "Esperado (teoria)"), colour = "grey40") +
+  geom_point(aes(colour = "Execuções"), alpha = .55, size = 2) +
+  geom_point(data = medio, aes(colour = "Média por N"), size = 3.5, shape = 18) +
+  scale_x_log10(breaks = sort(unique(res$N)), labels = label_log()) + scale_y_log10(labels = label_log()) +
+  scale_colour_manual(values = c("Execuções" = "#86b6ef", "Média por N" = "#184f95")) +
+  labs(x = "N (pontos)", y = "|π̂ − π|", colour = NULL, linetype = NULL)
+p1; salva(p1, "erro_vs_N.png")
 ```
 
-hmm... foram talvez seja interessante analisar o tempo de execução em função de N e do número de threads. 
-
-```{r}
-
-
-
-# Pré-agrega: média do tempo por (N, Threads)
-tempo_medio <- dados %>%
-  group_by(N, Threads) %>%
-  summarise(Tempo_Medio = mean(Tempo_Execucao), .groups = "drop")
-
-ggplot(tempo_medio, aes(x = N, y = Tempo_Medio, color = factor(Threads))) +
-  geom_line(linewidth = 1) +
-  geom_point(size = 2.5) +
-  theme(plot.title = element_text(face = "bold"))
-
+```{r modelo-erro}
+m_err <- lm(log10(Erro_Abs) ~ log10(N), data = res)
+ci <- confint(m_err)["log10(N)", ]
+zres <- res %>% group_by(Threads) %>%
+  summarise(n = n(), media_z = mean(z), dp_z = sd(z), `|z|>2` = sum(abs(z) > 2), .groups = "drop")
+knitr::kable(zres, digits = 2, caption = "Erro padronizado z = (π̂−π)/σ(N), esperado: média≈0, dp≈1")
 ```
 
+A inclinação ajustada de log|erro| × log N é **`r round(coef(m_err)[2], 3)`** (IC95%
+[`r round(ci[1], 3)`; `r round(ci[2], 3)`]); o valor teórico é −0,5
+(`r ifelse(ci[1] <= -0.5 & ci[2] >= -0.5, "consistente com a teoria", "fora do IC: investigar")`).
+O z padronizado tem média `r round(mean(res$z), 2)` e desvio-padrão `r round(sd(res$z), 2)`
+(esperado 0 e 1), o que valida gerador e estimador, e não depende do número de threads.
+**Conclusão parcial:** a paralelização não altera a precisão; ela só reduz o tempo para atingir
+um mesmo N.
 
-```{r}
-# Tempo de execução em função de N e do número de threads
-ggplot(dados, aes(x = N, y = Tempo_Execucao, color = Threads)) +
-  geom_jitter(width = 0.15, alpha = 0.5) +
-  stat_summary(fun = mean, geom = "point", size = 3, color = "darkblue") +
-  stat_summary(fun = mean, geom = "line", aes(group = Threads),
-               color = "darkblue", linewidth = 1) +
-  labs(title = "Tempo de Execução em função de N e do número de threads",
-       x = "Número de Pontos Simulados (N)",
-       y = "Tempo de Execução (s)") +
-  theme_minimal() +
-  theme(plot.title = element_text(face = "bold"))
+## 6. Desempenho
+
+### 6.1 Tempo de execução
+
+```{r tempo}
+resumo <- res %>% group_by(N, Threads) %>%
+  summarise(n = n(), media = mean(Tempo_Execucao), mediana = median(Tempo_Execucao),
+            dp = sd(Tempo_Execucao), cv_pct = 100 * dp / media, .groups = "drop")
+knitr::kable(resumo, digits = c(0, 0, 0, 5, 5, 5, 1),
+             col.names = c("N", "Threads", "n", "Média (s)", "Mediana (s)", "DP (s)", "CV (%)"))
+p2 <- ggplot(res, aes(Threads, Tempo_Execucao, colour = Threads_f)) +
+  geom_point(size = 2, alpha = .7) +
+  stat_summary(aes(group = 1), fun = mean, geom = "line", colour = "grey35", linewidth = .6) +
+  facet_wrap(~N, scales = "free_y", labeller = lab_N) +
+  scale_x_continuous(breaks = unique(res$Threads)) +
+  scale_colour_manual(values = pal, guide = "none") +
+  labs(x = "Threads", y = "Tempo (s)")
+p2; salva(p2, "tempo_vs_threads.png")
 ```
 
+### 6.2 Speedup e eficiência
+
+S(p) = T(1)/T(p) e E(p) = S(p)/p, sobre as médias por (N, p). O IC95% do speedup usa o método
+delta sobre os erros-padrão das médias.
+
+```{r speedup}
+base <- resumo %>% filter(Threads == 1) %>% select(N, m1 = media, dp1 = dp, n1 = n)
+sp <- resumo %>% left_join(base, by = "N") %>%
+  mutate(S = m1 / media,
+         se_S = S * sqrt((dp1 / sqrt(n1) / m1)^2 + (dp / sqrt(n) / media)^2),
+         E = S / Threads, Mpts_s = N / media / 1e6)
+knitr::kable(sp %>% select(N, Threads, S, E, Mpts_s), digits = c(0, 0, 2, 2, 1),
+             col.names = c("N", "Threads", "Speedup", "Eficiência", "Mpontos/s"))
+sp_long <- sp %>% mutate(Threads_f = factor(Threads))
+marca <- list(geom_vline(xintercept = nuc, linetype = "dashed", colour = "grey55"),
+              scale_x_continuous(breaks = unique(res$Threads)))
+p3 <- ggplot(sp_long, aes(Threads, S)) + marca +
+  geom_abline(slope = 1, intercept = 0, linetype = "dotted", colour = "grey40") +
+  geom_ribbon(aes(ymin = S - 1.96 * se_S, ymax = S + 1.96 * se_S, group = 1), fill = "#9ec5f4", alpha = .5) +
+  geom_line(colour = "#2a78d6", linewidth = .8) + geom_point(colour = "#2a78d6", size = 2.5) +
+  facet_wrap(~N, labeller = lab_N) + labs(x = "Threads", y = "Speedup S(p)",
+  caption = "Pontilhado: ideal S=p. Tracejado vertical: nº de núcleos físicos.")
+p4 <- ggplot(sp_long, aes(Threads, E)) + marca +
+  geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+  geom_line(colour = "#eb6834", linewidth = .8) + geom_point(colour = "#eb6834", size = 2.5) +
+  facet_wrap(~N, labeller = lab_N) + labs(x = "Threads", y = "Eficiência E(p)")
+p3; p4; salva(p3, "speedup.png"); salva(p4, "eficiencia.png")
+```
+
+```{r leitura, results='asis'}
+g <- sp %>% filter(N == max(N), Threads == max(Threads))
+p_ <- sp %>% filter(N == min(N), Threads == max(Threads))
+cat(sprintf(paste0("**Leitura (números gerados dos dados).** Para N = %s e %d threads, o speedup é ",
+  "%.2f (eficiência %.0f%%). Para N = %s, o speedup com %d threads é %.2f. A máquina tem %d núcleos ",
+  "físicos e %d CPUs lógicas."), format(g$N, big.mark = ".", scientific = FALSE), g$Threads, g$S, 100 * g$E,
+  format(p_$N, big.mark = ".", scientific = FALSE), p_$Threads, p_$S, nuc, logicas))
+```
+
+> ✎ **Interpretação do grupo (preencher/validar).** Expectativa a priori: o laço é
+> *embaraçosamente paralelo* e o estado do `mt19937` (~2,5 KB/thread) cabe no cache L1, então
+> espera-se speedup próximo do ideal **até o nº de núcleos físicos** e saturação depois
+> (SMT/oversubscription). Para N pequeno (10⁴), o custo de criar threads domina o trabalho útil
+> e o speedup tende a ficar abaixo de 1. Hipóteses a confirmar com os gráficos acima: (a) queda
+> de eficiência além dos núcleos físicos; (b) redução de frequência com mais núcleos ativos;
+> (c) overhead fixo em N pequeno.
+
+### 6.3 Controle experimental: deriva temporal
+
+Como a ordem é aleatória, uma deriva do sistema aparece como ruído, não como viés. Verificação:
+tempo de cada execução normalizado pela média da sua célula (N, p) em função da ordem.
+
+```{r deriva}
+dr <- res %>% group_by(N, Threads) %>% mutate(rel = Tempo_Execucao / mean(Tempo_Execucao)) %>% ungroup()
+rho <- cor(dr$Ordem, dr$rel, method = "spearman")
+p5 <- ggplot(dr, aes(Ordem, rel)) + geom_hline(yintercept = 1, colour = "grey60") +
+  geom_point(colour = "#2a78d6", alpha = .6) + geom_smooth(se = FALSE, colour = "#eb6834", method = "loess", formula = y ~ x) +
+  labs(x = "Ordem de execução", y = "Tempo / média da célula")
+p5; salva(p5, "deriva.png")
+```
+
+Correlação de Spearman entre ordem e tempo relativo: **`r round(rho, 2)`**
+(`r ifelse(abs(rho) < .2, "sem deriva relevante", "há indício de deriva: investigar")`).
+
+## 7. Dificuldades encontradas e soluções
+
+| Dificuldade (identificada na auditoria do pipeline) | Solução |
+|---|---|
+| Sementes `12345 + thread + repeticao` **repetem fluxos** entre repetições (ex.: thread 1 da rep. 1 = thread 0 da rep. 2, mesmo M); repetições não eram independentes e o desvio-padrão ficava subestimado | Semente única por execução (gerada no DOE), `seed_seq` por thread; teste `make test` |
+| Execução em ordem crescente de N/threads: deriva do sistema se confunde com os fatores | Ordem aleatória no DOE + coluna `Ordem` + verificação de deriva (§6.3) |
+| `tail \| while … exit 1` só saía do subshell: falha de execução ainda imprimia "sucesso" | Laço sem pipe, checagem de campos, saída escrita em `.tmp` e promovida só no final |
+| `make clean` apagava `dados/` (medições) e `make relatorio` falhava sem regra para o CSV | `clean` preserva `dados/`; `distclean` apaga tudo; CSV só é gerado se não existir |
+| Ambiente não registrado / semente não registrada / saída com 6 dígitos | `registra_ambiente.sh` na hora da medição; `Semente` e `Threads_Reais` no CSV; `setprecision(10)` |
+
+## 8. Limitações e próximos passos
+
+- T(1) é OpenMP com 1 thread, e não uma versão sequencial pura como prometido na Entrega 1;
+  compilar sem `-fopenmp` (com `#ifdef _OPENMP`) fecharia essa lacuna.
+- Uma única máquina e um único gerador (`mt19937`); sem fixação de threads (`OMP_PROC_BIND`).
+- Para a Etapa 3: modelo linear completo (log T ~ log N + log p), template ACM, `renv.lock`.
+
+## 9. Uso de ferramentas de IA (requisito 5.3)
+
+- **Agente:** Claude (Anthropic), modelo Sonnet 5.5, em modo agêntico (execução de comandos num sandbox).
+- **Dados fornecidos:** `monte_carlo.cpp`, `executor.sh`, `gera_layout.R`, `Makefile`, e os PDFs da Entrega 1 e do enunciado.
+- **Produzido com auxílio da IA:** correção de sementes no C++, `gera_layout.R`, `executor.sh`, `registra_ambiente.sh`, `Makefile`, este caderno e a tabela da seção 7.
+- **Verificação humana:** *a preencher pelo grupo* (revisão do código, conferência dos gráficos e da interpretação da seção 6.2).
+
+## Apêndice: sessão R
+
+```{r sessao}
+sessionInfo()
+```

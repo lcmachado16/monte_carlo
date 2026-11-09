@@ -1,0 +1,20 @@
+#!/bin/bash
+# Registra o ambiente NA HORA do experimento (nao na hora de gerar o relatorio).
+OUT="${1:-dados/ambiente.txt}"
+{
+echo "DATA=$(date -Iseconds)"
+echo "CPU_MODELO=$(lscpu | sed -n 's/^Model name:[[:space:]]*//p')"
+echo "CPUS_LOGICAS=$(nproc --all)"
+echo "NUCLEOS_FISICOS=$(lscpu -p=CORE,SOCKET | grep -v '^#' | sort -u | wc -l)"
+echo "SO=$(. /etc/os-release 2>/dev/null; echo "$PRETTY_NAME")"
+echo "KERNEL=$(uname -r)"
+echo "COMPILADOR=$(g++ --version | head -1)"
+echo "FLAGS=$(make -s -p -f Makefile 2>/dev/null | sed -n 's/^CXXFLAGS = //p' | head -1)"
+echo "GOVERNOR=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo n/d)"
+echo "LOADAVG_INICIO=$(cut -d' ' -f1-3 /proc/loadavg)"
+echo "OMP_ENV=$(env | grep '^OMP_' | tr '\n' ' ')"
+echo "FLAKE_LOCK_SHA256=$(sha256sum flake.lock 2>/dev/null | cut -c1-16 || echo n/d)"
+echo "GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo n/d)"
+echo "GIT_SUJO=$(git status --porcelain 2>/dev/null | wc -l)"
+} > "$OUT"
+lscpu > "$(dirname "$OUT")/lscpu.txt"

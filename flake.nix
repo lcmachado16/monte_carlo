@@ -9,7 +9,7 @@
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
-      
+
       rEnv = pkgs.rWrapper.override {
         packages = with pkgs.rPackages; [
           rmarkdown
@@ -26,7 +26,8 @@
           pkgs.gnumake
           pkgs.bash
           rEnv
-          pkgs.pandoc # Necessário para o rmarkdown renderizar HTML/PDF
+          pkgs.pandoc
+          pkgs.texlive.combined.scheme-medium
         ];
 
         shellHook = ''

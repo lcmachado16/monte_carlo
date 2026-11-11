@@ -83,6 +83,6 @@ INCLUIR = $(NIX) $(ORG_FILES) $(RMD_FILES) $(DIR_PDFS_ENTREGA_02) $(PROJECT_FILE
 .PHONY: compress tgz
 compress: tgz
 tgz:
-	tar -czf $(TGZ) --exclude='*.anterior' --exclude='*.tmp' --transform 's,^,entrega$(ENTREGA)/,' $(INCLUIR)
+	tar -czf $(TGZ) --exclude='*.anterior' --exclude='*.tmp' --exclude='*.tgz' --transform 's,^,entrega$(ENTREGA)/,' $(INCLUIR)
 	@echo "Gerado: $(TGZ)"
 	@tar -tzf $(TGZ) | head -40

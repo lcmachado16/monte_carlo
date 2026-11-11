@@ -132,12 +132,59 @@ um mesmo N.
 
 ### 6.1 Tempo de execução
 
+```{r tabela-tempo}
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(scales)
+
+# Opção 1: criar coluna com N em milhares
+res <- res %>% mutate(N_k = N / 1000)
+
+resumo <- res %>% 
+  group_by(N, N_k, Threads) %>%
+  summarise(n = n(), media = mean(Tempo_Execucao), 
+            mediana = median(Tempo_Execucao),
+            dp = sd(Tempo_Execucao), 
+            cv_pct = 100 * dp / media, .groups = "drop")
+
+
+
+# Na tabela, formatar N sem notação científica
+knitr::kable(resumo, 
+             digits = c(0, 0, 0, 0, 5, 5, 5, 1),
+             format.args = list(big.mark = ".", decimal.mark = ","),
+             col.names = c("N", "N (milhares)", "Threads", "n", 
+                          "Média (s)", "Mediana (s)", "DP (s)", "CV (%)"))
+
+
+resumo <- resumo |> mutate(N = N / 10000)  # Converter N para milhares para exibição na tabela
+
+## Formatacao pra nao mostrar notacao cientifica em N 
+# Ou converter N para character formatado
+resumo <- resumo %>% mutate(N_fmt = format(N, big.mark = ".", scientific = FALSE))
+
+knitr::kable(resumo %>% select(N_fmt, Threads, n, media, mediana, dp, cv_pct),
+             digits = c(0, 0, 5, 5, 5, 1),
+             col.names = c("N (por 10 milhares)", "Threads", "n", "Média (s)", "Mediana (s)", "DP (s)", "CV (%)"))
+
+
+```
+
+
 ```{r tempo}
 resumo <- res %>% group_by(N, Threads) %>%
   summarise(n = n(), media = mean(Tempo_Execucao), mediana = median(Tempo_Execucao),
             dp = sd(Tempo_Execucao), cv_pct = 100 * dp / media, .groups = "drop")
-knitr::kable(resumo, digits = c(0, 0, 0, 5, 5, 5, 1),
-             col.names = c("N", "Threads", "n", "Média (s)", "Mediana (s)", "DP (s)", "CV (%)"))
+
+
+knitr::kable(
+  resumo,
+  digits    = c(0, 0, 0, 5, 5, 5, 1),
+  format.args = list(big.mark = ".", decimal.mark = ","),
+  col.names = c("N", "Threads", "n", "Média (s)", "Mediana (s)", "DP (s)", "CV (%)")
+)
+             
 p2 <- ggplot(res, aes(Threads, Tempo_Execucao, colour = Threads_f)) +
   geom_point(size = 2, alpha = .7) +
   stat_summary(aes(group = 1), fun = mean, geom = "line", colour = "grey35", linewidth = .6) +

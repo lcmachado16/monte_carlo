@@ -46,7 +46,7 @@ dados/
 # Figuras geradas pelo analise.org
 figuras/
 *.png
-*.pdf
+entregas/*.pdf
 
 # Arquivos intermediários do Org / LaTeX / HTML
 analise.tex

@@ -1,5 +1,3 @@
-#!/bin/bash
-# Registra o ambiente NA HORA do experimento (nao na hora de gerar o relatorio).
 OUT="${1:-dados/ambiente.txt}"
 {
 echo "DATA=$(date -Iseconds)"
@@ -9,7 +7,7 @@ echo "NUCLEOS_FISICOS=$(lscpu -p=CORE,SOCKET | grep -v '^#' | sort -u | wc -l)"
 echo "SO=$(. /etc/os-release 2>/dev/null; echo "$PRETTY_NAME")"
 echo "KERNEL=$(uname -r)"
 echo "COMPILADOR=$(g++ --version | head -1)"
-echo "FLAGS=$(make -s -p -f Makefile 2>/dev/null | sed -n 's/^CXXFLAGS = //p' | head -1)"
+echo "FLAGS=$(sed -n 's/^CXXFLAGS *= *//p' Makefile | head -1)"
 echo "GOVERNOR=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo n/d)"
 echo "LOADAVG_INICIO=$(cut -d' ' -f1-3 /proc/loadavg)"
 echo "OMP_ENV=$(env | grep '^OMP_' | tr '\n' ' ')"

@@ -19,6 +19,15 @@
           dplyr
         ];
       };
+
+      texEnv = pkgs.texliveSmall.withPackages (ps: with ps; [
+        scheme-medium
+        wrapfig
+        ulem
+        capt-of
+        beamer
+        newunicodechar
+      ]);
     in {
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = [
@@ -27,7 +36,8 @@
           pkgs.bash
           rEnv
           pkgs.pandoc
-          pkgs.texlive.combined.scheme-medium
+          texEnv
+          pkgs.emacs-nox   # criar pdf automaticamente
         ];
 
         shellHook = ''

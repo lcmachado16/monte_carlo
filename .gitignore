@@ -53,6 +53,11 @@ entregas/**/*.html
 entregas/**/*.tex
 
 docs/**/*.pdf
+docs/**/*.vrb
+docs/**/*.fls
+docs/**/*.nav
+docs/**/*.fdb*
+docs/**/*.snm
 
 # Arquivos intermediários do Org / LaTeX / HTML
 analise.tex

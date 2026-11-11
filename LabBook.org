@@ -11,7 +11,14 @@ Caderno de notas
 
 Relato Post-Mortem Entrega dois
 
-Tenho ciência que a melhor prática seria criar o LabBook durante a 
+Tenho ciência que a melhor prática seria criar o LabBook durante a execução do projeto, mas como não foi feito, estou criando agora. 
+
+O LabBook é um documento que registra o que foi feito, como foi feito, dificuldades encontradas e soluções desenvolvidas. Ele também registra o uso de IA no projeto, incluindo consultas rápidas, síntese de texto, conversão de trechos de código e auxílio de agentes de IA.
+Me inspirei no modelo de LabBook do professor Lucas Schnorr e Thiago, que pode ser encontrado em [referencia = "https://github.com/schnorr/trabalhoconclusao/blob/master/LabBook.org")[LabBook].
+
+Neste momento há um descompasso entre o LabBook e a entrega final, pois o LabBook foi criado após a entrega. No entanto, ele ainda é útil para documentar o processo de desenvolvimento e as decisões tomadas durante o projeto.
+Também estou atualizando a estrutra de diretórios do projeto, para que fique mais organizado e fácil de navegar. Por exemplo, agora foi criado o diretorio docs para armazenar os arquivos necessários para
+a criação do pdf final, arquivos como acmsmart.cls e acm*.bst, que serão utilizados para gerar o pdf final com o template ACM. Além disso, os arquivos de saída do analise.org.
 
 
 
@@ -96,8 +103,11 @@ O uso de IA foi realizado de N maneiras:
 5.  Vou tentar criar o pdf a partir da ferramenta do Google - Gemini. Pretendo colar tudo que estou relatando no LabBook (referencia = "https://github.com/schnorr/trabalhoconclusao/blob/master/LabBook.org") e
    pedir para a ferramenta criar os slides. Estou fazendo isso pois quero testar o poder de integração da ferramenta com a solução própira Google Slides.
   - (Se ficar ruim vou criar os slides usando latex )
-  - obs ( apesar que o claude sugeriu usar *org-beamer* 
+  - obs ( apesar que o claude sugeriu usar *org-beamer* ) 
 
+  
+   Atualização: Optei por escolher a geração de slide por *tex*. Agora preciso adicionar o *org-beamer* no meu emacs. Aparentemente o pacote não vem por padrão, então vou ter que instalar. Basta usar o require (org-beamer). 
+   Também preciso atualizar o Makefile para gerar o pdf a partir do arquivo slides.org.
 
 
 

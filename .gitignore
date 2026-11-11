@@ -46,12 +46,19 @@ dados/
 # Figuras geradas pelo analise.org
 figuras/
 *.png
-entregas/*.pdf
+
+# Arquivos de saída do analise.org
+entregas/**/*.pdf
+entregas/**/*.html
+entregas/**/*.tex
+
+docs/**/*.pdf
 
 # Arquivos intermediários do Org / LaTeX / HTML
 analise.tex
 analise.html
 analise.pdf
+
 *.aux
 *.toc
 *.out

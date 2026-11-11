@@ -8,8 +8,11 @@ Caderno de notas
   e não sei (ainda) outro metodo pra utilizar o ambiente nix pelo emacs.
 
 
-* Entrega 01 
+- Estou enfrentando certa dificuldade na hora de gerar o pdf. Então como solução paliativa tenho que rodar "make slides" e depois "cd docs; pdflatex slides.tex" para gerar o pdf. 
 
+
+* Entrega 01 
+foi entregue. Vou adicionar referência posteriormente.
 
 * Entrega 02
 

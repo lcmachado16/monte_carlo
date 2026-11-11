@@ -15,17 +15,25 @@ Tenho ciência que a melhor prática seria criar o LabBook durante a
 
 
 
-
 ## ITENS ##
 
 1. DESC -  Descrição do ambiente de teste ou simulação
-   
 2. RESULTS - Resultados preliminares com gráficos e tabelas
-
 3. DIFF - Dificuldades encontradas e soluções desenvolvidas
-   
+
+  
 
 *** Descrição do ambiente
+Os experimentos rodaram numa única máquina, com o ambiente de software fixado por =flake.nix= / =flake.lock=. O hardware e o estado do sistema foram registrados automaticamente em =dados/ambiente.txt= no momento da medição (=scripts/registra_ambiente.sh=), e não depois.
+
+- Interpretação: /(onde o speedup satura em relação aos 6 núcleos físicos e 12 lógicos; o que acontece com N = 10^4)/.
+
+** Limitações das medições
+- Máquina com carga não nula (load 4,28 no início) e governor =powersave=.
+- T(1) é o binário OpenMP com 1 thread, não uma versão sequencial pura.
+- Apenas 5 repetições por configuração.
+
+
 
 *** Estratégia de implementação do objeto computacional
 
@@ -37,8 +45,14 @@ Tenho ciência que a melhor prática seria criar o LabBook durante a
 - *Saída:* uma linha CSV por execução (repetição, threads, N, M, $\hat{\pi}$, erro absoluto, erro relativo, tempo, semente, threads reais). O erro é calculado contra =acos(-1.0)=.
 - *Orquestração:* o plano de experimentos é gerado em R (ordem aleatória, semente única por execução), e um script em shell executa o binário em cada linha do plano e consolida o CSV de resultados.
 
+  
 
+** Melhorias e próximos passos
 
+O código não registra o ponto sorteado. Seria interessante adicionar as coordenadas X e Y.
+-> Poderia criar uma visualização em linha do tempo, que mostra a
+
+- Utilizar orgmode para escrever o relatório latex.([[https://github.com/schnorr/acmorg/][este repositório tem uma implementação promissora de template ACM em OrgMode]])
 
 ** Uso de IA
 
@@ -67,17 +81,22 @@ O uso de IA foi realizado de N maneiras:
       - Entrega_01.pdf
       - descricao_do_trabalho.pdf
 	
- O prompt levou tempo demais formulando a resposta então, acho que já haviam passado uns 6 minutos então interrompi e solicitei
+   O prompt levou tempo demais formulando a resposta então, acho que já haviam passado uns 6 minutos então interrompi e solicitei "seja breve. sua resposta já levou mais de 5 minutos. não é pra ser tão grande".
 
+   Então a ferramenta de IA retornou muito completo e bem próximo do que esta sendo entregue nesta entrega (ENTREGA_02).
+   Inclusive com um arquivo bem interessante *analise.rmd*.
 
- "seja breve. sua resposta já levou mais de 5 minutos. não é pra ser tão grande".
+   A partir deste resultado, foram criados pequenos ajustes durante o desenvolvimento.
 
- Então a ferramenta de IA retornou muito completo e bem próximo do que esta sendo entregue nesta entrega (ENTREGA_02).
- Inclusive com um arquivo bem interessante *analise.rmd*.
+ *obs:* Em certo ponto o uso "pro" tem atrapalhado, pois muitas vezes peço uma consulta rápida e vem uma super resposta elaborada demais.
+   algo como:"Qual material foi usado pra construir o teto da casa? - Aqui está o novo projeto de casa sustentável com teto solar e 
 
- Durante o processo de e
- 5. Vou tentar criar o pdf a partir da ferramenta do Google - Gemini. Pretendo colar 
+- 
 
+5.  Vou tentar criar o pdf a partir da ferramenta do Google - Gemini. Pretendo colar tudo que estou relatando no LabBook (referencia = "https://github.com/schnorr/trabalhoconclusao/blob/master/LabBook.org") e
+   pedir para a ferramenta criar os slides. Estou fazendo isso pois quero testar o poder de integração da ferramenta com a solução própira Google Slides.
+  - (Se ficar ruim vou criar os slides usando latex )
+  - obs ( apesar que o claude sugeriu usar *org-beamer* 
 
 
 

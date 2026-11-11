@@ -1,0 +1,201 @@
+#+TITLE: Monte Carlo (\pi) com OpenMP: processo experimental
+#+SUBTITLE: Análise de Desempenho, Entrega 2 (parcial)
+#+AUTHOR: Lucas Machado
+#+DATE: [PREENCHER]
+#+LANGUAGE: pt-br
+#+OPTIONS: H:2 toc:nil num:nil ^:{} author:t date:t
+#+STARTUP: beamer
+#+LATEX_CLASS: beamer
+#+LATEX_CLASS_OPTIONS: [presentation,aspectratio=169]
+#+BEAMER_THEME: Madrid
+#+LATEX_HEADER: \setbeamertemplate{navigation symbols}{}
+
+# Antes de exportar: (require 'ox-beamer) e figuras em figuras/ (ver lista no final).
+# Rótulos [DOE], [BOAS]... no canto = critério de avaliação atendido pelo slide.
+# [PREENCHER] = dado que depende de você.
+
+* Visão geral
+
+** Estrutura do projeto
+:PROPERTIES:
+:BEAMER_opt: fragile
+:END:
+#+BEAMER: \scriptsize
+#+begin_example
+monte_carlo/
+|-- flake.nix, flake.lock      ambiente reprodutivel (Nix)
+|-- Makefile                   orquestra: run, relatorio, test, tgz
+|-- src/
+|   `-- monte_carlo.cpp        objeto computacional (C++ / OpenMP)
+|-- scripts/
+|   |-- gera_layout.R          DOE: plano de experimentos (R)
+|   |-- executor.sh            executa o plano e consolida o CSV
+|   |-- registra_ambiente.sh   captura hardware/software na medicao
+|   `-- teste_rapido.sh        mesma semente => mesmo M
+|-- dados/
+|   |-- input_experimentos.csv plano (ordem, repeticao, threads, N, semente)
+|   |-- output_resultados.csv  medicoes brutas (80 linhas)
+|   `-- ambiente.txt, lscpu.txt
+|-- figuras/                   graficos gerados pela analise
+|-- analise.Rmd                analise literal (-> relatorio/analise.pdf)
+`-- slides.org                 esta apresentacao
+#+end_example
+
+#+BEAMER: \vfill\hfill{\scriptsize [REPRO] [DSBOX]}
+
+* Método e objeto
+
+** O objeto: estimar \pi sorteando pontos
+- Sorteiam-se $N$ pontos uniformes em $[-1,1]^2$
+- $M$ = pontos com $x^2 + y^2 \le 1$ (dentro do círculo)
+- Razão das áreas $\pi/4$, logo $\hat{\pi} = 4M/N$
+- Erro esperado cai com $N^{-1/2}$: cada casa decimal custa 100$\times$ mais pontos
+- Pergunta do estudo: como $\hat{\pi}$ (precisão) e o tempo (desempenho) variam com $N$ e com o número de threads?
+
+#+BEAMER: \vfill\hfill{\scriptsize [DESC]}
+
+** Implementação e paralelização
+- C++ com OpenMP, um binário parametrizado: =./monte_carlo <N> <Threads> <Repeticao> [Semente]=
+- Região paralela com =omp for schedule(static)= e =reduction(+:M)=
+- Laço /embaraçosamente paralelo/: iterações independentes, sem compartilhar memória
+- Um gerador =mt19937= por thread, semeado com =seed_seq= (semente da execução, nº da thread)
+- Tempo com =omp_get_wtime()= em volta de toda a região paralela
+- O ponto $(x,y)$ não é guardado: sorteado, testado e descartado
+
+#+BEAMER: \vfill\hfill{\scriptsize [DESC]}
+
+* Processo experimental
+
+** DOE: fatorial completo gerado por código
+| Fator       | Níveis                       |
+|-------------+------------------------------|
+| $N$         | $10^4$, $10^6$, $10^8$, $10^9$ |
+| Threads     | 1, 2, 4, 8                   |
+| Repetições  | 5                            |
+- 4 $\times$ 4 $\times$ 5 = *80 execuções*
+- Plano gerado por =scripts/gera_layout.R= com semente fixa: o /design/ também é reprodutível
+- *Ordem aleatória* (coluna =Ordem=) e *semente única* por execução
+
+#+BEAMER: \vfill\hfill{\scriptsize [DOE]}
+
+** Boas práticas de controle experimental
+- Aquecimento descartado antes da bateria
+- Semente única por execução, registrada no CSV
+- Verificação automática dos dados: nº de execuções, $0 \le M \le N$, threads reais = pedidas, sementes únicas
+- Valor de referência de \pi conferido entre C++ e R
+- Checagem de deriva temporal (tempo $\times$ ordem de execução)
+- Carga da máquina registrada no início e no fim
+
+#+BEAMER: \vfill\hfill{\scriptsize [BOAS]}
+
+** Ambiente de teste
+| Item            | Valor                                  |
+|-----------------+----------------------------------------|
+| CPU             | AMD Ryzen 5 5500U (6 núcleos, 12 lógicas) |
+| SO / kernel     | Fedora 43 / 7.2.13                     |
+| Compilador      | g++ (GCC) 16.2.0, =-O3 -fopenmp=       |
+| Governor        | =powersave=                            |
+| Carga (início / fim) | 4,28 / 2,59                       |
+| RAM             | [PREENCHER]                            |
+- Registrado automaticamente em =dados/ambiente.txt= /na hora da medição/
+- *Limitação:* máquina não ociosa e frequência variável
+
+#+BEAMER: \vfill\hfill{\scriptsize [DESC]}
+
+** Reprodutibilidade: do código ao PDF
+- Ambiente fixado com *Nix flake* (=flake.nix= + =flake.lock=)
+- Fluxo em =Makefile=: =make run=, =make relatorio=, =make test=
+- Mesmo (N, threads, semente) $\Rightarrow$ mesmo $M$ (testado por =make test=)
+- Dados brutos preservados: =make clean= não apaga =dados/=
+- Commit do código e hash do =flake.lock= gravados junto com a medição
+- Pipeline: =gera_layout.R= $\rightarrow$ =executor.sh= $\rightarrow$ análise $\rightarrow$ PDF
+
+#+BEAMER: \vfill\hfill{\scriptsize [REPRO]}
+
+** Ferramentas e programação literal
+- *Git*, *Nix*, *Make*: versionamento, ambiente e orquestração
+- *R (tidyverse, ggplot2)*: manipulação e gráficos
+- *Org-mode / Babel* (e R Markdown na versão atual do relatório): código, resultado e interpretação no mesmo documento
+- Números do texto são gerados dos dados: reexecutar atualiza tudo
+- Próximo passo: relatório em Org com o template ACM
+
+#+BEAMER: \vfill\hfill{\scriptsize [DSBOX] [LITERAL]}
+
+* Dificuldades e soluções
+
+** O problema mais sério: sementes que se repetiam
+- Semente original: =12345 + thread + repeticao=
+- Consequência: thread 1 da repetição 1 gerava /exatamente/ o mesmo $M$ que a thread 0 da repetição 2
+- Repetições não independentes $\Rightarrow$ desvio-padrão subestimado
+- *Como foi descoberto:* reproduzindo a lógica de sementes num teste isolado
+- *Solução:* semente única por execução, definida no plano (R) e repassada ao C++, que deriva um fluxo por thread com =seed_seq=
+
+#+BEAMER: \vfill\hfill{\scriptsize [DIFF]}
+
+** Outras dificuldades no pipeline
+| Problema                                              | Solução                                   |
+|-------------------------------------------------------+-------------------------------------------|
+| Execução em ordem crescente confundia deriva com fatores | Ordem aleatória no plano               |
+| =tail + while= com =exit 1= não abortava: "sucesso" mesmo com falha | Laço sem pipe, saída em arquivo temporário |
+| =make clean= apagava os dados medidos                 | =clean= preserva =dados/=                 |
+| CSV antigo fazia o =make= pular as medições           | Alvo de re-medição =make rerun=           |
+| Locale pt_BR (vírgula) quebrava o =printf=            | =LC_ALL=C= no script                      |
+| Registro do ambiente entrava em /loop/ (chamava o =make= de novo) | Ler as flags direto do Makefile |
+
+#+BEAMER: \vfill\hfill{\scriptsize [DIFF]}
+
+* Resultados preliminares
+
+** Precisão: o erro não depende do número de threads
+#+ATTR_LATEX: :height 6.2cm
+[[file:figuras/erro_relativo_vs_N_por_threads.png]]
+- [PREENCHER: 1 frase sobre se as médias acompanham a curva teórica $N^{-1/2}$]
+
+#+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
+
+** Desempenho: speedup por N
+#+ATTR_LATEX: :height 6.2cm
+[[file:figuras/speedup.png]]
+- [PREENCHER: onde o speedup satura em relação aos 6 núcleos físicos e 12 lógicos; o que ocorre com $N = 10^4$]
+
+#+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
+
+** Custo fixo de threads: tempo $\times$ $N$
+#+ATTR_LATEX: :height 6.2cm
+[[file:figuras/tempo_vs_N.png]]
+- [PREENCHER: onde os pontos se afastam da referência "tempo $\propto N$"]
+
+#+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
+
+* Fechamento
+
+** Limitações e próximos passos
+- $T(1)$ é o binário OpenMP com 1 thread, não uma versão sequencial pura
+- Uma só máquina, com carga não nula; apenas 5 repetições por configuração
+- Repetir a medição com a máquina ociosa e tudo commitado
+- Registrar as coordenadas $(x,y)$ (com $N$ pequeno) para visualizar o método
+- Relatório final em Org com o template ACM
+
+#+BEAMER: \vfill\hfill{\scriptsize [OPIN]}
+
+** Uso de IA
+- *Consulta rápida* (ex.: regex), *síntese de texto* (ex.: explicar os critérios em Org) e *conversão* (ex.: trecho para \LaTeX)
+- *Agente (Claude Code):* a partir dos arquivos que já existiam (=monte_carlo.cpp=, =executor.sh=, =gera_layout.R=, =Makefile=, Entrega 1 e enunciado)
+  - auditoria do pipeline, correção das sementes, scripts, Makefile e primeira versão da análise
+  - o grupo fez ajustes posteriores durante o desenvolvimento
+- Rascunho destes slides feito com IA a partir das minhas anotações
+- *Observação:* o modo agente tende a respostas elaboradas demais para consultas simples
+- Revisão humana do código e da interpretação: [CONFIRMAR]
+
+#+BEAMER: \vfill\hfill{\scriptsize [REPRO]}
+
+** Progresso e validação
+- *Validado:* método e estimador (erro segue a teoria), pipeline reprodutível, controle experimental
+- *Em aberto:* modelo estatístico completo, baseline sequencial puro, medição em máquina ociosa
+- [PREENCHER: avaliação do grupo sobre o andamento]
+
+#+BEAMER: \vfill\hfill{\scriptsize [OPIN]}
+
+# Figuras necessárias em figuras/ antes de compilar:
+#   erro_relativo_vs_N_por_threads.png, speedup.png, tempo_vs_N.png
+# (geradas por analise.Rmd; ou gere equivalentes pelos blocos Org)

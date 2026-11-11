@@ -71,5 +71,18 @@ distclean: clean
 	rm -rf dados/
 
 
-compress:
-	tar --exclude=.git --exclude=bin --exclude='*.anterior' --exclude='*.tmp' --exclude='*.tgz' -czf $(TGZ) -C .. $(notdir $(CURDIR))
+
+PROJECT_FILES       = $(wildcard Makefile .gitignore README.md)
+NIX                 = $(wildcard flake.nix flake.lock)
+ORG_FILES           = $(wildcard analise.org docs/slides.org LabBook.org)
+RMD_FILES           = $(wildcard analise.Rmd)
+DIR_PDFS_ENTREGA_02 = $(wildcard pdfs_entrega_02)
+
+INCLUIR = $(NIX) $(ORG_FILES) $(RMD_FILES) $(DIR_PDFS_ENTREGA_02) $(PROJECT_FILES) $(wildcard src scripts)
+
+.PHONY: compress tgz
+compress: tgz
+tgz:
+	tar -czf $(TGZ) --exclude='*.anterior' --exclude='*.tmp' --transform 's,^,entrega$(ENTREGA)/,' $(INCLUIR)
+	@echo "Gerado: $(TGZ)"
+	@tar -tzf $(TGZ) | head -40

@@ -48,6 +48,18 @@ $(REPORT_PDF): $(RMD_FILE) $(OUTPUT_CSV)
 	mkdir -p $(REPORT_DIR) figuras
 	$(RSCRIPT) -e "rmarkdown::render('$(RMD_FILE)', output_dir = '$(REPORT_DIR)')"
 
+
+# destino deve ser entregas/slides.pdf, mas org-beamer nao permite especificar o nome do arquivo de saida. 
+# emacs entregas/slides.org --batch --eval="(org-beamer-export-to-pdf)"
+# Obs: estou mantendo o slides.tex
+.PHONY: slides
+slides:
+	@mkdir -p entregas
+	emacs docs/slides.org --batch --eval="(org-beamer-export-to-pdf)"
+	@mv docs/slides.pdf entregas/slides.pdf
+	@rm -f docs/slides.{aux,log,nav,out,snm,toc,vrb,fls,fdb_latexmk}
+	@echo "→ entregas/slides.pdf"
+	
 # 'clean' NAO apaga dados/ (medicoes sao insubstituiveis); use distclean.
 clean:
 	rm -rf bin/ figuras/ $(REPORT_DIR)/ analise_cache/
@@ -57,5 +69,4 @@ distclean: clean
 tgz:
 	tar \ 
 		--exclude=.git \ 
-		--e
 	 	--exclude=bin --exclude=renv/library -czf ../$(notdir $(CURDIR)).tgz -C .. $(notdir $(CURDIR))

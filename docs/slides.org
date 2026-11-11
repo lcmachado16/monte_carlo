@@ -1,7 +1,7 @@
 #+TITLE: Monte Carlo (\pi) com OpenMP: processo experimental
 #+SUBTITLE: Análise de Desempenho, Entrega 2 (parcial)
-#+AUTHOR: Lucas Machado
-#+DATE: [PREENCHER]
+#+AUTHOR: Lucas C. Machado
+#+DATE: 11 de Novembro de 2026
 #+LANGUAGE: pt-br
 #+OPTIONS: H:2 toc:nil num:nil ^:{} author:t date:t
 #+STARTUP: beamer
@@ -10,9 +10,6 @@
 #+BEAMER_THEME: Madrid
 #+LATEX_HEADER: \setbeamertemplate{navigation symbols}{}
 
-# Antes de exportar: (require 'ox-beamer) e figuras em figuras/ (ver lista no final).
-# Rótulos [DOE], [BOAS]... no canto = critério de avaliação atendido pelo slide.
-# [PREENCHER] = dado que depende de você.
 
 * Visão geral
 
@@ -148,21 +145,21 @@ monte_carlo/
 
 ** Precisão: o erro não depende do número de threads
 #+ATTR_LATEX: :height 6.2cm
-[[file:figuras/erro_relativo_vs_N_por_threads.png]]
+[[file:../figuras/erro_relativo_vs_N_por_threads.png]]
 - [PREENCHER: 1 frase sobre se as médias acompanham a curva teórica $N^{-1/2}$]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
 
 ** Desempenho: speedup por N
 #+ATTR_LATEX: :height 6.2cm
-[[file:figuras/speedup.png]]
+[[file:../figuras/speedup.png]]
 - [PREENCHER: onde o speedup satura em relação aos 6 núcleos físicos e 12 lógicos; o que ocorre com $N = 10^4$]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
 
 ** Custo fixo de threads: tempo $\times$ $N$
 #+ATTR_LATEX: :height 6.2cm
-[[file:figuras/tempo_vs_N.png]]
+[[file:../figuras/tempo_vs_N.png]]
 - [PREENCHER: onde os pontos se afastam da referência "tempo $\propto N$"]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}

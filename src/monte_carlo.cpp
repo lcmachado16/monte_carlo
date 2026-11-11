@@ -18,11 +18,11 @@ int main(int argc, char* argv[]) {
     long long N = stoll(argv[1]);
     int num_threads = stoi(argv[2]);
     long long repeticao = stoll(argv[3]);
-    unsigned long long semente = (argc == 5) ? stoull(argv[4]) : 12345ULL;
+    unsigned long long semente = (argc == 5) ? stoull(argv[4]) : 12345ULL; 
 
     long long M = 0;
     int threads_reais = 0;
-    const double pi_ref = acos(-1.0);
+    const double pi_ref = acos(-1.0); // Ground truth: pi = 3.14159265358979323846
     omp_set_num_threads(num_threads);
 
     double t0 = omp_get_wtime();

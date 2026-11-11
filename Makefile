@@ -12,7 +12,7 @@ OUTPUT_CSV     = dados/output_resultados.csv
 
 RMD_FILE    = analise.Rmd
 REPORT_DIR  = relatorio
-REPORT_HTML = $(REPORT_DIR)/analise.html
+REPORT_PDF  = $(REPORT_DIR)/analise.pdf
 
 .PHONY: all compile input run rerun relatorio test clean distclean tgz
 
@@ -43,8 +43,8 @@ rerun:
 test: $(TARGET)
 	bash scripts/teste_rapido.sh
 
-relatorio: $(REPORT_HTML)
-$(REPORT_HTML): $(RMD_FILE) $(OUTPUT_CSV)
+relatorio: $(REPORT_PDF)
+$(REPORT_PDF): $(RMD_FILE) $(OUTPUT_CSV)
 	mkdir -p $(REPORT_DIR) figuras
 	$(RSCRIPT) -e "rmarkdown::render('$(RMD_FILE)', output_dir = '$(REPORT_DIR)')"
 
@@ -55,4 +55,7 @@ distclean: clean
 	rm -rf dados/
 
 tgz:
-	tar --exclude=bin --exclude=renv/library -czf ../$(notdir $(CURDIR)).tgz -C .. $(notdir $(CURDIR))
+	tar \ 
+		--exclude=.git \ 
+		--e
+	 	--exclude=bin --exclude=renv/library -czf ../$(notdir $(CURDIR)).tgz -C .. $(notdir $(CURDIR))

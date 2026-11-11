@@ -1,5 +1,5 @@
-#+TITLE: Monte Carlo (\pi) com OpenMP: processo experimental
-#+SUBTITLE: Análise de Desempenho, Entrega 2 (parcial)
+#+TITLE: Simulação de Monte Carlo para Estimativa de π
+#+SUBTITLE: PERF, Entrega 2 (parcial)
 #+AUTHOR: Lucas C. Machado
 #+DATE: 11 de Novembro de 2026
 #+LANGUAGE: pt-br
@@ -13,32 +13,9 @@
 
 * Visão geral
 
-** Estrutura do projeto
-:PROPERTIES:
-:BEAMER_opt: fragile
-:END:
-#+BEAMER: \scriptsize
-#+begin_example
-monte_carlo/
-|-- flake.nix, flake.lock      ambiente reprodutivel (Nix)
-|-- Makefile                   orquestra: run, relatorio, test, tgz
-|-- src/
-|   `-- monte_carlo.cpp        objeto computacional (C++ / OpenMP)
-|-- scripts/
-|   |-- gera_layout.R          DOE: plano de experimentos (R)
-|   |-- executor.sh            executa o plano e consolida o CSV
-|   |-- registra_ambiente.sh   captura hardware/software na medicao
-|   `-- teste_rapido.sh        mesma semente => mesmo M
-|-- dados/
-|   |-- input_experimentos.csv plano (ordem, repeticao, threads, N, semente)
-|   |-- output_resultados.csv  medicoes brutas (80 linhas)
-|   `-- ambiente.txt, lscpu.txt
-|-- figuras/                   graficos gerados pela analise
-|-- analise.Rmd                analise literal (-> relatorio/analise.pdf)
-`-- slides.org                 esta apresentacao
-#+end_example
+** Descrição do Objeto Computacional
 
-#+BEAMER: \vfill\hfill{\scriptsize [REPRO] [DSBOX]}
+descreva aqui o que eh monte carlo 
 
 * Método e objeto
 
@@ -93,7 +70,7 @@ monte_carlo/
 | Compilador      | g++ (GCC) 16.2.0, =-O3 -fopenmp=       |
 | Governor        | =powersave=                            |
 | Carga (início / fim) | 4,28 / 2,59                       |
-| RAM             | [PREENCHER]                            |
+| RAM             | 17 GiB                                 |
 - Registrado automaticamente em =dados/ambiente.txt= /na hora da medição/
 - *Limitação:* máquina não ociosa e frequência variável
 
@@ -126,6 +103,7 @@ monte_carlo/
 - Repetições não independentes $\Rightarrow$ desvio-padrão subestimado
 - *Como foi descoberto:* reproduzindo a lógica de sementes num teste isolado
 - *Solução:* semente única por execução, definida no plano (R) e repassada ao C++, que deriva um fluxo por thread com =seed_seq=
+- OBS: essa correção foi sugerida por ia - lembro que foi uma questão levantada na primeira entrega.
 
 #+BEAMER: \vfill\hfill{\scriptsize [DIFF]}
 
@@ -189,7 +167,12 @@ monte_carlo/
 ** Progresso e validação
 - *Validado:* método e estimador (erro segue a teoria), pipeline reprodutível, controle experimental
 - *Em aberto:* modelo estatístico completo, baseline sequencial puro, medição em máquina ociosa
-- [PREENCHER: avaliação do grupo sobre o andamento]
+- *Opinião do autor:* a entrega parcial já é suficiente para demonstrar domínio do tema, mas há espaço para melhorias. 
+  - A entrega parcial permitiu criar uma estrutura de execução e análise suficientemente plausível para a execução da proposta.
+  - O principal efeito colateral da implementação desta estrutura não era a execução do método de Monte Carlo, mas sim o exercício de controle experimental, análise de desempenho e reprodutibilidade do pipeline.
+  - Houve um pouco de dificuldade em trabalhar com certas ferramentas como o R, o Org-mode, isso gerou um pouco de inércia, mas conforme o tempo foi passando foi se estabelecendo melhor. 
+
+
 
 #+BEAMER: \vfill\hfill{\scriptsize [OPIN]}
 

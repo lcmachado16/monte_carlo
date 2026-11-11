@@ -1,4 +1,4 @@
-#+TITLE: Simulação de Monte Carlo para Estimativa de π
+#+TITLE: Simulação de Monte Carlo para Estimativa de \pi
 #+SUBTITLE: PERF, Entrega 2 (parcial)
 #+AUTHOR: Lucas C. Machado
 #+DATE: 11 de Novembro de 2026
@@ -10,23 +10,53 @@
 #+BEAMER_THEME: Madrid
 #+LATEX_HEADER: \setbeamertemplate{navigation symbols}{}
 
+# Rótulos [DOE], [BOAS]... no canto = critério de avaliação atendido pelo slide.
 
 * Visão geral
 
-** Descrição do Objeto Computacional
+** O que é Monte Carlo
+- Família de métodos que estima uma quantidade por *amostragem aleatória repetida*
+- Ideia central: transformar um problema determinístico (ex.: uma área) em uma probabilidade e estimá-la por frequência
+- Pela lei dos grandes números, a estimativa converge quando o número de amostras $N$ cresce
+- Erro típico proporcional a $N^{-1/2}$: preciso, mas lento de melhorar
+- Amostras independentes $\Rightarrow$ método naturalmente paralelizável
 
-descreva aqui o que eh monte carlo 
+** Estrutura do projeto
+:PROPERTIES:
+:BEAMER_opt: fragile
+:END:
+#+BEAMER: \scriptsize
+#+begin_example
+monte_carlo/
+|-- flake.nix, flake.lock      ambiente reprodutivel (Nix)
+|-- Makefile                   orquestra: run, relatorio, test, tgz
+|-- src/
+|   `-- monte_carlo.cpp        objeto computacional (C++ / OpenMP)
+|-- scripts/
+|   |-- gera_layout.R          DOE: plano de experimentos (R)
+|   |-- executor.sh            executa o plano e consolida o CSV
+|   |-- registra_ambiente.sh   captura hardware/software na medicao
+|   `-- teste_rapido.sh        mesma semente => mesmo M
+|-- dados/
+|   |-- input_experimentos.csv plano (ordem, repeticao, threads, N, semente)
+|   |-- output_resultados.csv  medicoes brutas (80 linhas)
+|   `-- ambiente.txt, lscpu.txt
+|-- figuras/                   graficos gerados pela analise
+|-- analise.Rmd                analise literal (-> relatorio/analise.pdf)
+`-- slides/
+    `-- slides.org             esta apresentacao
+#+end_example
+
+#+BEAMER: \vfill\hfill{\scriptsize [REPRO] [DSBOX]}
 
 * Método e objeto
 
-** O objeto: estimar \pi sorteando pontos
-- Sorteiam-se $N$ pontos uniformes em $[-1,1]^2$
-- $M$ = pontos com $x^2 + y^2 \le 1$ (dentro do círculo)
-- Razão das áreas $\pi/4$, logo $\hat{\pi} = 4M/N$
-- Erro esperado cai com $N^{-1/2}$: cada casa decimal custa 100$\times$ mais pontos
+** Aplicação: estimar \pi
+- Sorteiam-se $N$ pontos uniformes no quadrado $[-1,1]^2$ (área 4)
+- $M$ = pontos com $x^2 + y^2 \le 1$, dentro do círculo de raio 1 (área $\pi$)
+- Razão das áreas: $M/N \to \pi/4$, logo $\hat{\pi} = 4M/N$
+- Cada casa decimal a mais custa 100$\times$ mais pontos
 - Pergunta do estudo: como $\hat{\pi}$ (precisão) e o tempo (desempenho) variam com $N$ e com o número de threads?
-
-#+BEAMER: \vfill\hfill{\scriptsize [DESC]}
 
 ** Implementação e paralelização
 - C++ com OpenMP, um binário parametrizado: =./monte_carlo <N> <Threads> <Repeticao> [Semente]=
@@ -36,16 +66,14 @@ descreva aqui o que eh monte carlo
 - Tempo com =omp_get_wtime()= em volta de toda a região paralela
 - O ponto $(x,y)$ não é guardado: sorteado, testado e descartado
 
-#+BEAMER: \vfill\hfill{\scriptsize [DESC]}
-
 * Processo experimental
 
 ** DOE: fatorial completo gerado por código
-| Fator       | Níveis                       |
-|-------------+------------------------------|
-| $N$         | $10^4$, $10^6$, $10^8$, $10^9$ |
-| Threads     | 1, 2, 4, 8                   |
-| Repetições  | 5                            |
+| Fator      | Níveis                         |
+|------------+--------------------------------|
+| $N$        | $10^4$, $10^6$, $10^8$, $10^9$ |
+| Threads    | 1, 2, 4, 8                     |
+| Repetições | 5                              |
 - 4 $\times$ 4 $\times$ 5 = *80 execuções*
 - Plano gerado por =scripts/gera_layout.R= com semente fixa: o /design/ também é reprodutível
 - *Ordem aleatória* (coluna =Ordem=) e *semente única* por execução
@@ -63,14 +91,14 @@ descreva aqui o que eh monte carlo
 #+BEAMER: \vfill\hfill{\scriptsize [BOAS]}
 
 ** Ambiente de teste
-| Item            | Valor                                  |
-|-----------------+----------------------------------------|
-| CPU             | AMD Ryzen 5 5500U (6 núcleos, 12 lógicas) |
-| SO / kernel     | Fedora 43 / 7.2.13                     |
-| Compilador      | g++ (GCC) 16.2.0, =-O3 -fopenmp=       |
-| Governor        | =powersave=                            |
-| Carga (início / fim) | 4,28 / 2,59                       |
-| RAM             | 17 GiB                                 |
+| Item                 | Valor                                     |
+|----------------------+-------------------------------------------|
+| CPU                  | AMD Ryzen 5 5500U (6 núcleos, 12 lógicas) |
+| SO / kernel          | Fedora 43 / 7.2.13                        |
+| Compilador           | g++ (GCC) 16.2.0, =-O3 -fopenmp=          |
+| Governor             | =powersave=                               |
+| Carga (início / fim) | 4,28 / 2,59                               |
+| RAM                  | 17 GiB                                    |
 - Registrado automaticamente em =dados/ambiente.txt= /na hora da medição/
 - *Limitação:* máquina não ociosa e frequência variável
 
@@ -89,7 +117,7 @@ descreva aqui o que eh monte carlo
 ** Ferramentas e programação literal
 - *Git*, *Nix*, *Make*: versionamento, ambiente e orquestração
 - *R (tidyverse, ggplot2)*: manipulação e gráficos
-- *Org-mode / Babel* (e R Markdown na versão atual do relatório): código, resultado e interpretação no mesmo documento
+- *R Markdown* no relatório atual e *Org-mode* nestes slides: código, resultado e interpretação no mesmo documento
 - Números do texto são gerados dos dados: reexecutar atualiza tudo
 - Próximo passo: relatório em Org com o template ACM
 
@@ -103,42 +131,58 @@ descreva aqui o que eh monte carlo
 - Repetições não independentes $\Rightarrow$ desvio-padrão subestimado
 - *Como foi descoberto:* reproduzindo a lógica de sementes num teste isolado
 - *Solução:* semente única por execução, definida no plano (R) e repassada ao C++, que deriva um fluxo por thread com =seed_seq=
-- OBS: essa correção foi sugerida por ia - lembro que foi uma questão levantada na primeira entrega.
+- Correção sugerida pela IA; a questão das sementes já havia sido levantada na Entrega 1
 
 #+BEAMER: \vfill\hfill{\scriptsize [DIFF]}
 
 ** Outras dificuldades no pipeline
-| Problema                                              | Solução                                   |
-|-------------------------------------------------------+-------------------------------------------|
-| Execução em ordem crescente confundia deriva com fatores | Ordem aleatória no plano               |
-| =tail + while= com =exit 1= não abortava: "sucesso" mesmo com falha | Laço sem pipe, saída em arquivo temporário |
-| =make clean= apagava os dados medidos                 | =clean= preserva =dados/=                 |
-| CSV antigo fazia o =make= pular as medições           | Alvo de re-medição =make rerun=           |
-| Locale pt_BR (vírgula) quebrava o =printf=            | =LC_ALL=C= no script                      |
-| Registro do ambiente entrava em /loop/ (chamava o =make= de novo) | Ler as flags direto do Makefile |
+#+BEAMER: \small
+| Problema                                          | Solução                         |
+|---------------------------------------------------+---------------------------------|
+| Ordem crescente: deriva confundia fatores         | Ordem aleatória no plano        |
+| =tail + while= com =exit 1= não abortava          | Laço sem pipe; saída em =.tmp=  |
+| =make clean= apagava os dados medidos             | =clean= preserva =dados/=       |
+| CSV antigo fazia o =make= pular as medições       | Alvo =make rerun=               |
+| Locale pt_BR (vírgula) quebrava o =printf=        | ~LC_ALL=C~ no script            |
+| Registro do ambiente chamava o =make= em /loop/   | Ler flags direto do Makefile    |
 
 #+BEAMER: \vfill\hfill{\scriptsize [DIFF]}
 
 * Resultados preliminares
 
-** Precisão: o erro não depende do número de threads
-#+ATTR_LATEX: :height 6.2cm
+** Precisão de $\hat{\pi}$
+#+ATTR_LATEX: :height 6.6cm
+[[file:../figuras/erro_vs_N.png]]
+
+#+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
+
+** Convergência: erro relativo $\times$ $N$, por número de threads
+#+ATTR_LATEX: :height 6.6cm
 [[file:../figuras/erro_relativo_vs_N_por_threads.png]]
-- [PREENCHER: 1 frase sobre se as médias acompanham a curva teórica $N^{-1/2}$]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
 
-** Desempenho: speedup por N
-#+ATTR_LATEX: :height 6.2cm
-[[file:../figuras/speedup.png]]
-- [PREENCHER: onde o speedup satura em relação aos 6 núcleos físicos e 12 lógicos; o que ocorre com $N = 10^4$]
+** Tempo de execução
+#+ATTR_LATEX: :height 6.6cm
+[[file:../figuras/tempo_vs_threads.png]]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
 
-** Custo fixo de threads: tempo $\times$ $N$
-#+ATTR_LATEX: :height 6.2cm
+** Tempo $\times$ $N$, por número de threads
+#+ATTR_LATEX: :height 6.6cm
 [[file:../figuras/tempo_vs_N.png]]
-- [PREENCHER: onde os pontos se afastam da referência "tempo $\propto N$"]
+
+#+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
+
+** Speedup
+
+- $S(p) = T(1)/T(p)$ e $E(p) = S(p)/p$, calculados sobre as médias por $(N,p)$
+- O IC95% do speedup usa o método delta, aplicado aos erros-padrão das médias
+
+Descrição: pontilhado ideal S=p. Tracejado vertical: nro de nucleos físicos (6). Tracejado horizontal: speedup máximo observado (5,1).
+
+#+ATTR_LATEX: 
+[[file:../figuras/speedup.png]]
 
 #+BEAMER: \vfill\hfill{\scriptsize [RESULTS]}
 
@@ -151,31 +195,22 @@ descreva aqui o que eh monte carlo
 - Registrar as coordenadas $(x,y)$ (com $N$ pequeno) para visualizar o método
 - Relatório final em Org com o template ACM
 
-#+BEAMER: \vfill\hfill{\scriptsize [OPIN]}
-
 ** Uso de IA
 - *Consulta rápida* (ex.: regex), *síntese de texto* (ex.: explicar os critérios em Org) e *conversão* (ex.: trecho para \LaTeX)
 - *Agente (Claude Code):* a partir dos arquivos que já existiam (=monte_carlo.cpp=, =executor.sh=, =gera_layout.R=, =Makefile=, Entrega 1 e enunciado)
   - auditoria do pipeline, correção das sementes, scripts, Makefile e primeira versão da análise
-  - o grupo fez ajustes posteriores durante o desenvolvimento
+  - ajustes posteriores feitos por mim durante o desenvolvimento
 - Rascunho destes slides feito com IA a partir das minhas anotações
 - *Observação:* o modo agente tende a respostas elaboradas demais para consultas simples
-- Revisão humana do código e da interpretação: [CONFIRMAR]
-
-#+BEAMER: \vfill\hfill{\scriptsize [REPRO]}
+- Revisão humana do código e da interpretação: a IA não substituiu o autor mas foi fundamental no processo. Tanto de correção quanto de planejamento e análise.
 
 ** Progresso e validação
-- *Validado:* método e estimador (erro segue a teoria), pipeline reprodutível, controle experimental
+- *Validado:* estrutura de execução, controle experimental e reprodutibilidade do pipeline
+- *A validar nos resultados:* aderência do erro à curva $N^{-1/2}$
 - *Em aberto:* modelo estatístico completo, baseline sequencial puro, medição em máquina ociosa
-- *Opinião do autor:* a entrega parcial já é suficiente para demonstrar domínio do tema, mas há espaço para melhorias. 
-  - A entrega parcial permitiu criar uma estrutura de execução e análise suficientemente plausível para a execução da proposta.
-  - O principal efeito colateral da implementação desta estrutura não era a execução do método de Monte Carlo, mas sim o exercício de controle experimental, análise de desempenho e reprodutibilidade do pipeline.
-  - Houve um pouco de dificuldade em trabalhar com certas ferramentas como o R, o Org-mode, isso gerou um pouco de inércia, mas conforme o tempo foi passando foi se estabelecendo melhor. 
-
-
+- *Opinião do autor:*
+  - A estrutura de execução e análise já sustenta a proposta, com espaço para melhorias
+  - O maior aprendizado foi controle experimental, análise de desempenho e reprodutibilidade, mais que o método em si
+  - R e Org-mode geraram inércia no início, que diminuiu com o uso. Ainda é preciso melhorar a forma de gerar \LaTeX.
 
 #+BEAMER: \vfill\hfill{\scriptsize [OPIN]}
-
-# Figuras necessárias em figuras/ antes de compilar:
-#   erro_relativo_vs_N_por_threads.png, speedup.png, tempo_vs_N.png
-# (geradas por analise.Rmd; ou gere equivalentes pelos blocos Org)

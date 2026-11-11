@@ -4,6 +4,10 @@
 Caderno de notas 
 
 
+- Talvez seja melhor tirar o emacs do flake.nix, pois agora tá abrindo diretamente do terminal
+  e não sei (ainda) outro metodo pra utilizar o ambiente nix pelo emacs.
+
+
 * Entrega 01 
 
 
@@ -28,7 +32,39 @@ a criação do pdf final, arquivos como acmsmart.cls e acm*.bst, que serão util
 2. RESULTS - Resultados preliminares com gráficos e tabelas
 3. DIFF - Dificuldades encontradas e soluções desenvolvidas
 
-  
+
+*** Organização do repositorio
+
+#+begin_src shell
+  git ls-files | tree --fromfile | tee repo.txt
+
+#+end_src
+
+#+RESULTS:
+| .   |                 |                      |                          |
+| ├── | analise.org     |                      |                          |
+| ├── | analise.Rmd     |                      |                          |
+| ├── | docs            |                      |                          |
+| │   | ├──             | artigo               |                          |
+| │   | │               | ├──                  | acmart.cls               |
+| │   | │               | └──                  | ACM-Reference-Format.bst |
+| │   | └──             | slides.org           |                          |
+| ├── | flake.lock      |                      |                          |
+| ├── | flake.nix       |                      |                          |
+| ├── | .gitignore      |                      |                          |
+| ├── | LabBook.org     |                      |                          |
+| ├── | Makefile        |                      |                          |
+| ├── | README.md       |                      |                          |
+| ├── | scripts         |                      |                          |
+| │   | ├──             | executor.sh          |                          |
+| │   | ├──             | gera_layout.R        |                          |
+| │   | ├──             | registra_ambiente.sh |                          |
+| │   | └──             | teste_rapido.sh      |                          |
+| └── | src             |                      |                          |
+| └── | monte_carlo.cpp |                      |                          |
+|     |                 |                      |                          |
+| 5   | directories,    | 16                   | files                    |
+
 
 *** Descrição do ambiente
 Os experimentos rodaram numa única máquina, com o ambiente de software fixado por =flake.nix= / =flake.lock=. O hardware e o estado do sistema foram registrados automaticamente em =dados/ambiente.txt= no momento da medição (=scripts/registra_ambiente.sh=), e não depois.

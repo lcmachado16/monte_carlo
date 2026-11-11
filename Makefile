@@ -14,6 +14,10 @@ RMD_FILE    = analise.Rmd
 REPORT_DIR  = relatorio
 REPORT_PDF  = $(REPORT_DIR)/analise.pdf
 
+ENTREGA = 02
+AUTOR   = lucas_machado
+TGZ     = $(AUTOR)_$(ENTREGA).tgz
+
 .PHONY: all compile input run rerun relatorio test clean distclean tgz
 
 all: relatorio
@@ -66,7 +70,6 @@ clean:
 distclean: clean
 	rm -rf dados/
 
-tgz:
-	tar \ 
-		--exclude=.git \ 
-	 	--exclude=bin --exclude=renv/library -czf ../$(notdir $(CURDIR)).tgz -C .. $(notdir $(CURDIR))
+
+compress:
+	tar --exclude=.git --exclude=bin --exclude='*.anterior' --exclude='*.tmp' --exclude='*.tgz' -czf $(TGZ) -C .. $(notdir $(CURDIR))

@@ -1,0 +1,65 @@
+
+* Observações iniciais
+
+- para visualizar as imagens precisa garantir a renderização inline com *M-x org-toggle-inline-images*
+  
+
+
+* Analise 
+
+vamos ver o que tem em outputs_resultados.csv 
+
+#+begin_src R :session
+
+     dados <- read.csv("dados/output_resultados.csv")
+
+    print(names(dados)) 
+
+#+end_src
+
+#+RESULTS:
+| Ordem          |
+| Repeticao      |
+| Threads        |
+| N              |
+| M              |
+| Pi_Estimado    |
+| Erro_Abs       |
+| Erro_Rel_Perc  |
+| Tempo_Execucao |
+| Semente        |
+| Threads_Reais  |
+
+Legal, sabemos as colunas. Vamos ver o que tem nas primeiras linhas 
+#+begin_src R :session
+print(head(dados))
+  
+
+#+end_src
+
+#+RESULTS:
+| 1 | 3 | 1 |    1000000 |    785794 |    3.143176 |   0.00158334641 |   0.05039948156 |     0.047198828 |  585766320 | 1 |
+| 2 | 1 | 2 | 1000000000 | 785405101 | 3.141620404 | 2.775041021e-05 | 0.0008833229915 |     23.12006957 | 1734127484 | 2 |
+| 3 | 5 | 8 | 1000000000 | 785425989 | 3.141703956 | 0.0001113024102 |  0.003542865752 |     7.154498034 |  459345388 | 8 |
+| 4 | 5 | 8 |    1000000 |    785015 |     3.14006 |   0.00153265359 |   0.04878587897 |  0.008741482998 | 2010385757 | 8 |
+| 5 | 3 | 4 |  100000000 |  78539119 |  3.14156476 | 2.789358979e-05 | 0.0008878805392 |     1.161178297 | 1910219150 | 4 |
+| 6 | 2 | 1 |      10000 |      7912 |      3.1648 |   0.02320734641 |    0.7387127794 | 0.0004743590034 | 1999875286 | 1 |
+
+
+
+
+
+* Analise - imagens 
+
+#+begin_src R :results graphics file :file figuras/erro_vs_N.png :width 800 :height 450 :session
+library(ggplot2)
+res <- read.csv("dados/output_resultados.csv")
+ggplot(res, aes(N, Erro_Abs)) + geom_point() +
+  scale_x_log10() + scale_y_log10()
+#+end_src
+
+#+RESULTS:
+[[file:figuras/erro_vs_N.png]]
+
+
+

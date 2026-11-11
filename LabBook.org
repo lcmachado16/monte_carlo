@@ -1,0 +1,93 @@
+
+* Notas
+
+Caderno de notas 
+
+
+* Entrega 01 
+
+
+* Entrega 02
+
+Relato Post-Mortem Entrega dois
+
+Tenho ciência que a melhor prática seria criar o LabBook durante a 
+
+
+
+
+## ITENS ##
+
+1. DESC -  Descrição do ambiente de teste ou simulação
+   
+2. RESULTS - Resultados preliminares com gráficos e tabelas
+
+3. DIFF - Dificuldades encontradas e soluções desenvolvidas
+   
+
+*** Descrição do ambiente
+
+*** Estratégia de implementação do objeto computacional
+
+- *Método:* Monte Carlo geométrico. Sorteiam-se $N$ pontos uniformes no quadrado $[-1,1]^2$ e conta-se $M$, o número de pontos com $x^2+y^2 \le 1$. Como a razão das áreas é $\pi/4$, estima-se $\hat{\pi} = 4M/N$.
+- *Linguagem:* C++ com OpenMP (=g++ -O3 -fopenmp=), um único binário parametrizado por linha de comando: =./monte_carlo <N> <Threads> <Repeticao> [Semente]=.
+- *Paralelização:* uma região paralela (=#pragma omp parallel=) com laço dividido por =omp for schedule(static)=. O contador $M$ usa =reduction(+:M)=: cada thread soma numa cópia privada, e as cópias são combinadas no fim. Isso evita condição de corrida e compartilhamento de memória no laço. As iterações são independentes, então o problema é embaraçosamente paralelo.
+- *Números aleatórios:* cada thread tem seu próprio gerador =mt19937=, semeado via =std::seed_seq= com (semente da execução, número da thread). Assim os fluxos são independentes entre threads e entre repetições, e o resultado é reproduzível para um mesmo (N, threads, semente).
+- *Medição:* o tempo é medido com =omp_get_wtime()= em volta de toda a região paralela (criação das threads, geração e contagem). O programa também confere quantas threads foram realmente usadas.
+- *Saída:* uma linha CSV por execução (repetição, threads, N, M, $\hat{\pi}$, erro absoluto, erro relativo, tempo, semente, threads reais). O erro é calculado contra =acos(-1.0)=.
+- *Orquestração:* o plano de experimentos é gerado em R (ordem aleatória, semente única por execução), e um script em shell executa o binário em cada linha do plano e consolida o CSV de resultados.
+
+
+
+
+** Uso de IA
+
+O uso de IA foi realizado de N maneiras:
+1. Como consulta rápida
+   - Exemplo: "Como faço um regex para listar arquivo de tal maneira..."
+   - Como ficaria este trecho m
+   - 
+2. Como solicitação de síntese de texto.
+   " Explique em texto orgmode de maneira bem ligeira estes aspectos -> REPRO - Aspectos de reprodutibilidade dos experimentos.."
+   
+3. Conversão rápida
+   - Como ficaria este trecho de código em latex?
+     ". A lógica consiste em gerar coordenadas aleatórias $(x,y)$ no intervalo $[-1, 1] \times.."
+    
+4. *Auxílio de agentes de IA*
+   Aqui entra um aspecto interessante deste projeto, pois foi a primeira vez que *EU* \todo(alterar para algo nao tao eu)
+   usei de um *recurso pro* do claude code.
+
+   1. Como primeiro prompt usei  "monte_carlo.pdf é a entrega 1. estou fazendo a entrega 2. preciso dar um jeito na analise e reprodutibilidade", 
+      juntamente subi os arquivos que já tinha criado:
+      - monte_carlo.cpp
+      - executor.sh
+      - gera_layout.R
+      - Makefile
+      - Entrega_01.pdf
+      - descricao_do_trabalho.pdf
+	
+ O prompt levou tempo demais formulando a resposta então, acho que já haviam passado uns 6 minutos então interrompi e solicitei
+
+
+ "seja breve. sua resposta já levou mais de 5 minutos. não é pra ser tão grande".
+
+ Então a ferramenta de IA retornou muito completo e bem próximo do que esta sendo entregue nesta entrega (ENTREGA_02).
+ Inclusive com um arquivo bem interessante *analise.rmd*.
+
+ Durante o processo de e
+ 5. Vou tentar criar o pdf a partir da ferramenta do Google - Gemini. Pretendo colar 
+
+
+
+
+
+** Retomando - Objeto Computacional
+
+
+Simulação de Monte Carlo: Estimação de $\pi$
+O objeto computacional deste estudo é um algoritmo de Simulação de Monte Carlo utilizado para estimar o valor de $\pi$. A lógica consiste em gerar coordenadas aleatórias $(x,y)$ no intervalo $[-1, 1] \times [-1, 1]$ e verificar se pertencem a um círculo inscrito no quadrado, sob a condição $x^2 + y^2 \leq 1$.Simulação de Monte Carlo: Estimação de $\pi$
+
+O objeto computacional deste estudo é um algoritmo de Simulação de Monte Carlo utilizado para estimar o valor de $\pi$. A lógica consiste em gerar coordenadas aleatórias $(x,y)$ no intervalo $[-1, 1] \times [-1, 1]$ e verificar se pertencem a um círculo inscrito no quadrado, sob a condição $x^2 + y^2 \leq 1$.
+
+
